@@ -121,9 +121,7 @@ function renderPalette(){
   $('paint-label').textContent=editingPerla?(canPaint?'Perla '+(state.sequence.indexOf(state.selected)+1)+' · '+selected.label:'Selecciona una perla en el loop'):state.colors.length?state.colors.length+' '+(state.colors.length===1?'color elegido':'colores elegidos'):'Elige tus colores';
   $('color-note').textContent=editingPerla?'Elige un color: solo cambia la perla resaltada. Puedes tocar otra perla para editarla.':'Elige uno o varios colores. Toca un color para añadirlo y vuelve a tocarlo para quitarlo.';
   $('paint-all').disabled=!state.colors.length;
-  $('piece-color-field').hidden=selected.type!=='round';
-  $('piece-color').innerHTML='<option value="">Sin color</option>'+opts.map(x=>`<option value="${x.sku}" ${usedOther(x.sku)>=x.stock?'disabled':''}>${esc(x.color)}</option>`).join('');
-  $('piece-color').value=selected.sku||'';
+
 }
 function paintSelectedPiece(sku){
   if(state.selected?.[0]!=='r'||(sku&&!baseColors().some(x=>x.sku===sku)))return;
@@ -254,8 +252,8 @@ function render(){
   $('gesture-note').hidden=!state.ready;
   $('size-field').hidden=!state.started||group()!=='collar';$('diameter-field').hidden=!state.ready||state.product!=='cat';$('included').hidden=!state.ready;$('pet-note').hidden=!state.ready||group()!=='collar';
   document.querySelectorAll('[data-product]').forEach(b=>b.setAttribute('aria-pressed',String(state.started&&b.dataset.product===group())));
-  if(!state.ready){$('preview-label').textContent='Tu próximo loop';$('preview-count').textContent='';$('preview').innerHTML='<div class="empty-preview"><span class="eyebrow">HECHO A TU MANERA</span><h2>Todo empieza<br>con tu elección.</h2><p>'+(state.started?'Elige la mascota y la medida de su collar.':'¿Collar, llavero o phone strap?')+'</p></div>';$('size').value='';$('download').hidden=true;$('order').disabled=true;return;}
-  $('download').hidden=false;
+  if(!state.ready){$('preview-label').textContent='Tu próximo loop';$('preview-count').textContent='';$('preview').innerHTML='<div class="empty-preview"><span class="eyebrow">HECHO A TU MANERA</span><h2>Todo empieza<br>con tu elección.</h2><p>'+(state.started?'Elige la mascota y la medida de su collar.':'¿Collar, llavero o phone strap?')+'</p></div>';$('size').value='';$('mobile-order-bar').hidden=true;$('view-preview').hidden=true;$('order').disabled=true;return;}
+  $('mobile-order-bar').hidden=false;$('view-preview').hidden=false;document.body.classList.add('is-building');
   sync();const info=q();$('preview-label').textContent=info.p.label;$('preview').innerHTML=previewSVG();$('preview-count').textContent=info.p.mm/10+' cm'+(group()==='collar'?' de collar':' aprox. · perímetro del loop');
   document.querySelectorAll('[data-product]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.product===group())));
   $('size-field').hidden=group()!=='collar';$('diameter-field').hidden=state.product!=='cat';$('pet-note').hidden=group()!=='collar';$('size').value=group()==='collar'?state.product:'cat';$('diameter').value=String(state.diameter);
@@ -266,22 +264,20 @@ function render(){
   const pos=state.sequence.indexOf(state.selected);$('move-left').disabled=pos<=0;$('move-right').disabled=pos>=state.sequence.length-1;
   renderPalette();renderStockGuidance();renderHardware();renderCharmChoice();const errors=E.validate(state,items);$('errors').innerHTML=errors.map(e=>'<p>'+esc(e)+'</p>').join('');$('order').disabled=!!errors.length;
   $('base-price').textContent=money(info.base);$('extras-price').textContent=money(info.extras);$('total-price').textContent=money(info.total);
-  $('download').disabled=!!errors.length;
+  $('mobile-total').textContent=money(info.total);$('mobile-order').disabled=!!errors.length;
 }
-function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,3500);}
+function toast(text){const inside=$('order-dialog')?.open;const status=inside?$('order-status'):null;if(status){status.textContent=text;status.hidden=false;clearTimeout(toast.orderTimer);toast.orderTimer=setTimeout(()=>status.hidden=true,4500);return;}$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,3500);}
 function summary(){
   const info=q(),parts=state.sequence.map(piece),name=state.name?state.name+' ('+(state.letterStyle==='flat'?'letras planas':'letras cúbicas')+')':'Sin letras';
-  return 'Hola, Loop Lab 🩷 Quiero armar este diseño:\n\n'+info.p.label+'\nMedida: '+info.p.mm/10+' cm'+(group()==='collar'?'':' de perímetro del loop aprox.')+'\nNombre: '+name+'\nColores base: '+[...new Set(state.beads.map(s=>item(s)?.color))].join(', ')+'\nCharms: '+(info.charms.map(c=>c.type+' · '+c.color+(c.colorAvailability?' (color sujeto a disponibilidad)':'')+' ['+c.sku+']').join('; ')||'Sin charms')+'\n\nOrden de las piezas:\n'+parts.map((p,i)=>(i+1)+'. '+(p.type==='letter'?'Letra '+p.label:p.label)+(p.sku?' ['+p.sku+']':'')).join('\n')+'\n\nBase: '+money(info.base)+'\nExtras: '+money(info.extras)+'\nTotal del diseño: '+money(info.total)+'\n\n¿Me confirman disponibilidad, medida final y costo de envío?';
+  return 'Hola, Loop Lab 🩷 Quiero armar este diseño:\n\n'+info.p.label+'\nMedida: '+info.p.mm/10+' cm'+(group()==='collar'?'':' de perímetro del loop aprox.')+'\nNombre: '+name+'\nColores base: '+[...new Set(state.beads.map(s=>item(s)?.color))].join(', ')+'\nCharms: '+(info.charms.map(c=>c.type+' · '+c.color+(c.colorAvailability?' (color sujeto a disponibilidad)':'')).join('; ')||'Sin charms')+'\n\nOrden de las piezas:\n'+parts.map((p,i)=>(i+1)+'. '+(p.type==='letter'?'Letra '+p.label:p.label)).join('\n')+'\n\nBase: '+money(info.base)+'\nExtras: '+money(info.extras)+'\nTotal del diseño: '+money(info.total)+'\n\n¿Me confirman disponibilidad, medida final y costo de envío?';
 }
 async function imageBlob(){const svg=previewSVG(true),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));try{const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});const canvas=document.createElement('canvas');canvas.width=1500;canvas.height=1500;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,1500,1500);return await new Promise((ok,no)=>canvas.toBlob(b=>b?ok(b):no(new Error('No se pudo crear la imagen')),'image/png'));}finally{URL.revokeObjectURL(url);}}
 async function download(){try{const blob=await imageBlob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mi-loop-'+state.product+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);toast('Imagen lista para guardar.');}catch{toast('No pudimos guardar la imagen. Prueba con una captura de pantalla.');}}
-async function copyInstagramLink(){
-  $('instagram-link-field').hidden=false;
-  try{await navigator.clipboard.writeText('https://ig.me/m/looplab_pe');toast('Enlace copiado. Pégalo en Safari o Chrome para abrir el chat de Loop Lab.');}
-  catch{$('instagram-link').focus();$('instagram-link').select();toast('Mantén presionado el enlace para copiarlo y abrirlo en tu navegador.');}
-}
-async function copyOrder(){try{await navigator.clipboard.writeText(summary());toast('Pedido copiado. Guarda la imagen del loop y adjúntala al pegar el resumen en Instagram.');}catch{$('order-text').focus();$('order-text').select();toast('Mantén presionado el resumen y elige Copiar. Luego abre el chat de @looplab_pe.');}}
-function changeProduct(product){state.started=true;state.ready=product!=='collar';state.product=product==='collar'?'cat':product;if(state.product==='cat')state.diameter=9;state.name='';$('name').value='';$('charm-model').value='';$('charm-variant').value='';$('charm-action').value='';defaults();renderCharms();render();}
+async function copyOrder(){try{await navigator.clipboard.writeText(summary());toast('Pedido copiado. Pégalo en Instagram.');return true;}catch{ $('share-fallback').hidden=false;$('order-text').focus();$('order-text').select();toast('No se pudo copiar automáticamente. Usa Copiar pedido o selecciona el resumen.');return false;}}
+function openOrder(){if(!state.ready||E.validate(state,items).length)return;const info=q();$('order-text').value=summary();$('dialog-price').textContent=money(info.total);$('share-fallback').hidden=true;$('order-status').hidden=true;$('order-dialog').showModal();}
+let returnScrollY=0;
+function viewDesign(){returnScrollY=window.scrollY;document.getElementById('design-visual').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});$('return-to-builder').hidden=false;}
+function changeProduct(product){document.body.classList.add('is-building');state.started=true;state.ready=product!=='collar';state.product=product==='collar'?'cat':product;if(state.product==='cat')state.diameter=9;state.name='';$('name').value='';$('charm-model').value='';$('charm-variant').value='';$('charm-action').value='';defaults();renderCharms();render();}
 function mixColors(){state.beads=E.allocateBeads(state.colors,q().rounds,items,$('pattern').value);}
 function renderStockGuidance(){
   const info=q(),used=Object.fromEntries(state.colors.map(s=>[s,state.beads.filter(x=>x===s).length]));
@@ -302,7 +298,6 @@ function bind(){
   $('palette').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(!b)return;const sku=b.dataset.color;if(editingPerla){paintSelectedPiece(sku);return;}state.colors=state.colors.includes(sku)?state.colors.filter(s=>s!==sku):[...state.colors,sku];mixColors();render();});
   $('paint-all').addEventListener('click',()=>{const selected=piece(state.selected),sku=selected.type==='round'&&selected.sku?selected.sku:state.colors.at(-1);if(!sku)return;state.colors=[sku];mixColors();render();});
   $('pattern').addEventListener('change',()=>{mixColors();render();});
-  $('piece-color').addEventListener('change',e=>paintSelectedPiece(e.target.value));
   $('color-mode').addEventListener('change',e=>{editingPerla=e.target.value==='piece';if(editingPerla&&state.selected?.[0]!=='r')state.selected=state.sequence.find(id=>id[0]==='r')||state.selected;render();});
   $('position').addEventListener('change',e=>{state.selected=e.target.value;render();});
   function selectPiece(e){if(e.type!=='keydown'&&Date.now()<suppressPieceClickUntil)return;const g=e.target.closest('[data-piece]');if(g){state.selected=g.dataset.piece;render();}}
@@ -321,9 +316,13 @@ function bind(){
     state.charms=edit.charms;$('charm-model').value='';$('charm-variant').value='';$('charm-action').value='';renderCharms();render();
   });
   $('selected-charms').addEventListener('click',e=>{const b=e.target.closest('[data-remove]');if(b){state.charms.splice(Number(b.dataset.remove),1);state.sequence=[];render();}});
-  $('copy-instagram-link').addEventListener('click',copyInstagramLink);
-  $('download').addEventListener('click',download);$('save-order-image').addEventListener('click',download);$('order').addEventListener('click',()=>{if(E.validate(state,items).length)return;$('order-text').value=summary();$('order-dialog').showModal();});$('close-dialog').addEventListener('click',()=>$('order-dialog').close());$('copy-order').addEventListener('click',copyOrder);
-  $('share-order').addEventListener('click',async()=>{if(!navigator.share){await copyOrder();return;}try{const blob=await imageBlob(),file=new File([blob],'mi-loop.png',{type:'image/png'});if(navigator.canShare?.({files:[file]}))await navigator.share({files:[file],title:'Mi diseño Loop Lab',text:summary()});else await navigator.share({title:'Mi diseño Loop Lab',text:summary()});}catch(e){if(e.name!=='AbortError')toast('Usa Copiar pedido o guarda la imagen para enviarla.');}});
+  $('order').addEventListener('click',openOrder);$('mobile-order').addEventListener('click',openOrder);
+  $('close-dialog').addEventListener('click',()=>$('order-dialog').close());
+  $('view-preview').addEventListener('click',viewDesign);$('mobile-preview').addEventListener('click',viewDesign);
+  $('return-to-builder').addEventListener('click',()=>{window.scrollTo({top:returnScrollY,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});$('return-to-builder').hidden=true;});
+  $('save-order-image').addEventListener('click',download);$('copy-order').addEventListener('click',copyOrder);
+  $('instagram-chat').addEventListener('click',async e=>{e.preventDefault();const url=$('instagram-chat').href;const ok=await copyOrder();if(ok){toast('✓ Pedido copiado. Abriendo Instagram… Pega el texto en el chat.');setTimeout(()=>window.location.assign(url),1100);}else{$('instagram-help').textContent='Selecciona y copia el resumen. Después abre Instagram desde el botón.';}});
+  $('share-order').addEventListener('click',async()=>{try{const blob=await imageBlob(),file=new File([blob],'mi-loop.png',{type:'image/png'});if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Mi diseño Loop Lab',text:summary()});return;}if(navigator.share){await navigator.share({title:'Mi diseño Loop Lab',text:summary()});return;}throw new Error('Compartir no disponible');}catch(e){if(e.name==='AbortError')return;$('share-fallback').hidden=false;toast('Puedes guardar la imagen y copiar el pedido aquí abajo.');}});
 }
-async function init(){try{const response=await fetch('./catalog.json');if(!response.ok)throw new Error('Catálogo');const data=await response.json();items=data.items;defaults();bind();renderCharms();render();}catch(e){$('preview').innerHTML='<p class="loading">No pudimos cargar los materiales.<br>Recarga la página para intentarlo otra vez.</p>';$('order').disabled=true;$('download').disabled=true;}}
+async function init(){try{const embedded=document.getElementById('embedded-catalog');const data=embedded?JSON.parse(embedded.textContent):(await (async()=>{const response=await fetch('./catalog.json');if(!response.ok)throw new Error('Catálogo');return response.json();})());items=data.items;defaults();bind();renderCharms();render();}catch(e){$('preview').innerHTML='<p class="loading">No pudimos cargar los materiales.<br>Recarga la página para intentarlo otra vez.</p>';$('order').disabled=true;$('mobile-order').disabled=true;}}
 init();
