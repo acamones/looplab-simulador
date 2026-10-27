@@ -321,7 +321,13 @@ function bind(){
   $('view-preview').addEventListener('click',viewDesign);$('mobile-preview').addEventListener('click',viewDesign);
   $('return-to-builder').addEventListener('click',()=>{window.scrollTo({top:returnScrollY,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});$('return-to-builder').hidden=true;});
   $('save-order-image').addEventListener('click',download);$('copy-order').addEventListener('click',copyOrder);
-  $('instagram-chat').addEventListener('click',async e=>{e.preventDefault();const url=$('instagram-chat').href;const ok=await copyOrder();if(ok){toast('✓ Pedido copiado. Abriendo Instagram… Pega el texto en el chat.');setTimeout(()=>window.location.assign(url),1100);}else{$('instagram-help').textContent='Selecciona y copia el resumen. Después abre Instagram desde el botón.';}});
+  $('instagram-chat').addEventListener('click',async e=>{if (typeof gtag === 'function') {
+  gtag('event', 'generate_lead', {
+    method: 'instagram',
+    lead_source: 'simulador'
+  });
+}
+e.preventDefault();const url=$('instagram-chat').href;const ok=await copyOrder();if(ok){toast('✓ Pedido copiado. Abriendo Instagram… Pega el texto en el chat.');setTimeout(()=>window.location.assign(url),1100);}else{$('instagram-help').textContent='Selecciona y copia el resumen. Después abre Instagram desde el botón.';}});
   $('share-order').addEventListener('click',async()=>{try{const blob=await imageBlob(),file=new File([blob],'mi-loop.png',{type:'image/png'});if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Mi diseño Loop Lab',text:summary()});return;}if(navigator.share){await navigator.share({title:'Mi diseño Loop Lab',text:summary()});return;}throw new Error('Compartir no disponible');}catch(e){if(e.name==='AbortError')return;$('share-fallback').hidden=false;toast('Puedes guardar la imagen y copiar el pedido aquí abajo.');}});
 }
 async function init(){try{const embedded=document.getElementById('embedded-catalog');const data=embedded?JSON.parse(embedded.textContent):(await (async()=>{const response=await fetch('./catalog.json');if(!response.ok)throw new Error('Catálogo');return response.json();})());items=data.items;defaults();bind();renderCharms();render();}catch(e){$('preview').innerHTML='<p class="loading">No pudimos cargar los materiales.<br>Recarga la página para intentarlo otra vez.</p>';$('order').disabled=true;$('mobile-order').disabled=true;}}
