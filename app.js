@@ -274,7 +274,12 @@ function summary(){
 async function imageBlob(){const svg=previewSVG(true),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));try{const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});const canvas=document.createElement('canvas');canvas.width=1500;canvas.height=1500;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,1500,1500);return await new Promise((ok,no)=>canvas.toBlob(b=>b?ok(b):no(new Error('No se pudo crear la imagen')),'image/png'));}finally{URL.revokeObjectURL(url);}}
 async function download(){try{const blob=await imageBlob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mi-loop-'+state.product+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);toast('Imagen lista para guardar.');}catch{toast('No pudimos guardar la imagen. Prueba con una captura de pantalla.');}}
 async function copyOrder(){try{await navigator.clipboard.writeText(summary());toast('Pedido copiado. Pégalo en Instagram.');return true;}catch{ $('share-fallback').hidden=false;$('order-text').focus();$('order-text').select();toast('No se pudo copiar automáticamente. Usa Copiar pedido o selecciona el resumen.');return false;}}
-function openOrder(){if(!state.ready||E.validate(state,items).length)return;const info=q();$('order-text').value=summary();$('dialog-price').textContent=money(info.total);$('share-fallback').hidden=true;$('order-status').hidden=true;$('order-dialog').showModal();}
+function openOrder(){if(!state.ready||E.validate(state,items).length)return;if (typeof gtag === 'function') {
+  gtag('event', 'generate_lead', {
+    method: 'preparar_pedido',
+    lead_source: 'simulador'
+  });
+}const info=q();$('order-text').value=summary();$('dialog-price').textContent=money(info.total);$('share-fallback').hidden=true;$('order-status').hidden=true;$('order-dialog').showModal();}
 let returnScrollY=0;
 function viewDesign(){returnScrollY=window.scrollY;document.getElementById('design-visual').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});$('return-to-builder').hidden=false;}
 function changeProduct(product){document.body.classList.add('is-building');state.started=true;state.ready=product!=='collar';state.product=product==='collar'?'cat':product;if(state.product==='cat')state.diameter=9;state.name='';$('name').value='';$('charm-model').value='';$('charm-variant').value='';$('charm-action').value='';defaults();renderCharms();render();}
@@ -321,12 +326,7 @@ function bind(){
   $('view-preview').addEventListener('click',viewDesign);$('mobile-preview').addEventListener('click',viewDesign);
   $('return-to-builder').addEventListener('click',()=>{window.scrollTo({top:returnScrollY,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});$('return-to-builder').hidden=true;});
   $('save-order-image').addEventListener('click',download);$('copy-order').addEventListener('click',copyOrder);
-  $('instagram-chat').addEventListener('click',async e=>{if (typeof gtag === 'function') {
-  gtag('event', 'generate_lead', {
-    method: 'instagram',
-    lead_source: 'simulador'
-  });
-}
+  $('instagram-chat').addEventListener('click',async e=>{
 e.preventDefault();const url=$('instagram-chat').href;const ok=await copyOrder();if(ok){toast('✓ Pedido copiado. Abriendo Instagram… Pega el texto en el chat.');setTimeout(()=>window.location.assign(url),1100);}else{$('instagram-help').textContent='Selecciona y copia el resumen. Después abre Instagram desde el botón.';}});
   $('share-order').addEventListener('click',async()=>{try{const blob=await imageBlob(),file=new File([blob],'mi-loop.png',{type:'image/png'});if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Mi diseño Loop Lab',text:summary()});return;}if(navigator.share){await navigator.share({title:'Mi diseño Loop Lab',text:summary()});return;}throw new Error('Compartir no disponible');}catch(e){if(e.name==='AbortError')return;$('share-fallback').hidden=false;toast('Puedes guardar la imagen y copiar el pedido aquí abajo.');}});
 }
